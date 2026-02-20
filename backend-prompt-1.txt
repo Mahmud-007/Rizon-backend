@@ -1,0 +1,64 @@
+Role: Senior Go Backend Engineer
+
+Task: Build a Go + MongoDB backend for an authentication and feedback system.
+
+1. Core APIs to Implement:
+
+POST /auth/request:
+
+Accept an email.
+* Generate a unique, time-limited token.
+* Store in MongoDB with expires_at and is_used: false.
+* Implement rate limiting (abuse prevention).
+* Send an email via Resend SDK containing a deep link: rizon://login?token=UUID.
+* This is an example code snippet 
+    `package main
+
+import (
+    "log"
+
+    "github.com/resend/resend-go/v2"
+)
+
+func main() {
+    apiKey := "123456789"
+
+    client := resend.NewClient(apiKey)
+
+    params := &resend.SendEmailRequest{
+        From:    "onboarding@resend.dev",
+        To:      []string{"mahmud6799@gmail.com"},
+        Subject: "Hello World",
+        Html:    "<p>Congrats on sending your <strong>deep link: rizon://login?token=UUID</strong>!</p>",
+    }
+
+    sent, err := client.Emails.Send(params)
+    if err != nil {
+        log.Fatalf("failed to send email: %v", err)
+    }
+
+    log.Printf("email sent: %s", sent.Id)
+}
+
+GET /auth/verify:
+
+Validate the token. Ensure it is not expired and not used.
+* Mark token as used.
+* Generate and return a JWT for session persistence.
+
+POST /feedback:
+* Requirement: Must be attributable to the authenticated user via JWT middleware.
+* Save feedback (text/rating) to MongoDB.
+* Concurrency: Trigger the Slack Mock "Publish" call in a background goroutine so the API remains fast and reliable.
+
+GET /user/status:
+* Return whether the user has completed the onboarding flow.
+
+2. Technical Constraints (Strict):
+
+Slack Abstraction: Define a Notifier interface. Create a MockSlack struct that implements this interface by logging messages to the console.
+* Race Conditions: Ensure the /feedback endpoint is idempotent to prevent duplicate submissions.
+* Independence: The feedback business logic must call the Notifier interface, not the MockSlack directly, ensuring real integration can replace the mock later without refactoring.
+
+3. Database: Use the official MongoDB Go Driver.
+4. Framework: Use chi router for middleware support and resend-go for emails.

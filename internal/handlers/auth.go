@@ -85,9 +85,14 @@ func (h *AuthHandler) RequestLogin(w http.ResponseWriter, r *http.Request) {
 
 	// Build the HTTPS redirect URL (email-safe) instead of rizon:// directly
 	// Gmail/Outlook strip custom URL schemes, so we link to our server first
+	// Dynamically detect the base URL from the incoming request
 	baseURL := os.Getenv("BASE_URL")
 	if baseURL == "" {
-		baseURL = fmt.Sprintf("http://localhost:%s", os.Getenv("PORT"))
+		scheme := "http"
+		if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+			scheme = "https"
+		}
+		baseURL = fmt.Sprintf("%s://%s", scheme, r.Host)
 	}
 	emailLink := fmt.Sprintf("%s/auth/redirect?token=%s", baseURL, tokenValue)
 
